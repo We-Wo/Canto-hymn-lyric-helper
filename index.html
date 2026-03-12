@@ -6,7 +6,6 @@
 <title>粵語詩歌創作助手</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<!-- 引入我們分離出來的 CSS 檔案 -->
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -57,15 +56,9 @@
   <div id="genre-status" class="status"></div>
   <div id="genre-results" class="results-grid"></div>
 </div>
- 
 </div>
- 
 <script>
-// ══════════════════════════════════════════════════════════════════════════
-//  PHRASE DICTIONARY (Local Database)
-//  Format: { phrase, jyutping (space-separated), tones (array), type, meaning }
-//  type: "faith"=基督教核心用語, "praise"=讚美敬拜, "prayer"=禱告, "life"=生命, "gen"=一般
-// ══════════════════════════════════════════════════════════════════════════
+
 const PHRASES = [
   // ── 2-char phrases: 神性與稱呼 (Deity & Titles) ───────────────────────
   {w:"上帝",j:"soeng dai",t:[6,3],type:"faith",m:"上帝、神"},
@@ -429,27 +422,21 @@ const PHRASES = [
   {w:"靠主得勝",j:"kaau zyu dak sing",t:[3,2,1,3],type:"faith",m:"靠主得勝"}
 ];
  
-// ── Build tone-key index ─────────────────────────────────────────────────
-const TONE_INDEX = {}; // key "1-2-3" → [phrases]
+const TONE_INDEX = {}; 
 PHRASES.forEach(p => {
   const key = p.t.join("-");
   if (!TONE_INDEX[key]) TONE_INDEX[key] = [];
   TONE_INDEX[key].push(p);
 });
  
-// ── Color / name maps ────────────────────────────────────────────────────
 const TC = { 1:"#d62828",2:"#e07c24",3:"#1a9e8a",4:"#2e6fa3",5:"#7b2fbe",6:"#4a5260" };
 const TN = { 1:"陰平",2:"陰上",3:"陰去",4:"陽平",5:"陽上",6:"陽去" };
 const TT = { 1:"高平↔",2:"高升↗",3:"高降↘",4:"低平→",5:"低升↗",6:"低降↘" };
 const TYPE_LABEL = { faith:"基督教",praise:"讚美",prayer:"禱告",life:"生命",gen:"一般" };
 const TYPE_COLOR = { faith:"#b5251a",praise:"#c9933a",prayer:"#2e6fa3",life:"#1a9e8a",gen:"#888" };
  
-// ── State ────────────────────────────────────────────────────────────────
 let seq = [];
  
-// ══════════════════════════════════════════════════════════════════════════
-//  TABS
-// ══════════════════════════════════════════════════════════════════════════
 function switchTab(id){
   const ids=["tone","genre"]; // Removed 'jyut'
   document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",ids[i]===id));
@@ -457,9 +444,7 @@ function switchTab(id){
   document.getElementById("panel-"+id).classList.add("active");
 }
  
-// ══════════════════════════════════════════════════════════════════════════
-//  TONE LEGEND
-// ══════════════════════════════════════════════════════════════════════════
+
 function renderToneLegend(){
   document.getElementById("tone-legend").innerHTML =
     [1,2,3,4,5,6].map(t=>`
@@ -477,9 +462,7 @@ function renderTonePills(){
       </button>`).join("");
 }
  
-// ══════════════════════════════════════════════════════════════════════════
-//  SEQUENCE
-// ══════════════════════════════════════════════════════════════════════════
+
 function addTone(t){
   if(seq.length>=6) return;
   seq.push(t);
@@ -511,10 +494,7 @@ function searchByTones(){
   const key = seq.join("-");
   const el = document.getElementById("tone-results");
  
-  // Exact match
   const exact = TONE_INDEX[key] || [];
- 
-  // Partial match
   const seqStr = seq.join("-");
   const partial = [];
   Object.entries(TONE_INDEX).forEach(([k,phrases])=>{
@@ -555,10 +535,7 @@ function searchByTones(){
  
   el.innerHTML = html;
 }
- 
-// ══════════════════════════════════════════════════════════════════════════
-//  SHARED CARD RENDERER
-// ══════════════════════════════════════════════════════════════════════════
+
 function phraseCard(p, highlightTones){
   const toneKey = p.t.join("-");
   const borderColor = TYPE_COLOR[p.type]||"#ccc";
@@ -582,9 +559,7 @@ function phraseCard(p, highlightTones){
     </div>`;
 }
  
-// ══════════════════════════════════════════════════════════════════════════
-//  TAB 2 — 主題詞庫 (Offline only)
-// ══════════════════════════════════════════════════════════════════════════
+//  TAB 2 — 主題詞庫 
 const GENRES=["讚美","敬拜","感恩","禱告","救恩","復活","聖靈","信心","盼望","受苦","宣教","謙卑","順服"];
  
 function renderGenreChips(){
@@ -596,8 +571,6 @@ function selectGenre(g){
   document.querySelectorAll(".g-chip").forEach(c=>c.classList.toggle("sel",c.textContent===g));
   searchByGenre();
 }
- 
-// local genre → phrase-type mapping
 const GENRE_TYPE_MAP = {
   讚美:["praise","faith"], 敬拜:["praise","faith"], 感恩:["prayer","praise"],
   禱告:["prayer","faith"], 救恩:["faith"], 復活:["faith"], 聖靈:["faith"],
@@ -621,7 +594,6 @@ function searchByGenre(){
   const results=document.getElementById("genre-results");
   results.innerHTML="";
  
-  // Local search only
   const types=GENRE_TYPE_MAP[val]||["faith","praise","prayer","life","gen"];
   const kws=GENRE_KEYWORDS[val]||[];
   const localHits=PHRASES.filter(p=>{
@@ -641,9 +613,7 @@ function searchByGenre(){
   }
 }
  
-// ══════════════════════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════════════════════
+
 renderToneLegend();
 renderTonePills();
 renderGenreChips();
