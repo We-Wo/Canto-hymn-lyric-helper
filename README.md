@@ -3,7 +3,7 @@ Helper tool for writing Cantonese hymn lyrics, offering Jyutping-to-character lo
 
 ✝ 粵語詩歌創作助手 (Cantonese Hymn Writer)
 
-👉 ([點擊這裡立即使用線上版] (https://chimerical-dodol-031671.netlify.app/))
+👉 **[點擊這裡立即使用線上版] (https://chimerical-dodol-031671.netlify.app/)**
 
 📖 關於此工具 (About)
 
