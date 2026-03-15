@@ -6,6 +6,7 @@
 <title>粵語詩歌創作助手</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!-- 引入我們分離出來的 CSS 檔案 -->
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,438 +14,305 @@
 <header>
   <h1>✝ 粵語詩歌創作助手</h1>
   <p>Cantonese Hymn Writer · 聲調查詞 · 主題詞庫</p>
+  <button class="info-btn" onclick="openInfoModal()" title="使用說明">i</button>
 </header>
  
-<div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('tone')">🎼 聲調查字</button>
-  <button class="tab-btn" onclick="switchTab('genre')">🏷️ 主題詞庫</button>
+<!-- 資料庫載入提示 -->
+<div id="loading-indicator" style="text-align:center; padding:30px 20px; color:#b5251a; font-weight:bold; background:#fff; border-radius:12px; margin: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+  ⏳ 正在讀取並建立詞庫索引，請稍候...
 </div>
- 
-<div class="content">
- 
-<!-- TAB 1 — 聲調查字 -->
-<div class="panel active" id="panel-tone">
-  <p class="sec-desc">
-    按下聲調數字，建立聲調序列（例如 4→1 代表先陽平後陰平），即時顯示所有聲調吻合的詞語。
-    優先顯示基督教詩歌用語。
-  </p>
-  <div class="tone-legend" id="tone-legend"></div>
-  <div class="tone-section">
-    <h3>📌 點擊加入聲調：</h3>
-    <div class="tone-pills" id="tone-pills"></div>
-    <div class="seq-bar" id="tone-seq">
-      <span class="seq-hint">點擊上方數字加入聲調…</span>
+
+<!-- 主要操作介面 (預設隱藏，等資料庫載入完成後顯示) -->
+<div id="main-ui" style="display:none;">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tone')">🎼 聲調查字</button>
+    <button class="tab-btn" onclick="switchTab('genre')">🏷️ 主題詞庫</button>
+    <button class="tab-btn" onclick="switchTab('tech')">✏️ 0243填詞符號搜尋</button>
+  </div>
+   
+  <div class="content">
+
+    <!-- 聲調記憶口訣 (全域顯示) -->
+    <div class="mnemonic-box">
+      <div class="mnemonic-title">💡 粵語聲調記憶口訣 (1至6聲)</div>
+      <div class="mnemonic-chars">
+        <div class="m-char" style="background:var(--t1)">三<small>1</small></div>
+        <div class="m-char" style="background:var(--t2)">碗<small>2</small></div>
+        <div class="m-char" style="background:var(--t3)">半<small>3</small></div>
+        <div class="m-char" style="background:var(--t4)">牛<small>4</small></div>
+        <div class="m-char" style="background:var(--t5)">腩<small>5</small></div>
+        <div class="m-char" style="background:var(--t6)">麵<small>6</small></div>
+      </div>
     </div>
-    <div class="actions-row">
-      <button class="ghost" onclick="clearSeq()">✕ 清除</button>
-      <button class="go" onclick="searchByTones()" id="btn-tone-search">查詞語</button>
+
+    <!-- TAB 1 — 聲調查字 -->
+    <div class="panel active" id="panel-tone">
+      <p class="sec-desc">
+        按下聲調數字，建立聲調序列（例如 4→1 代表先陽平後陰平），即時顯示所有聲調吻合的詞語。
+        優先顯示基督教詩歌用語。
+      </p>
+      
+      <div class="tone-legend" id="tone-legend"></div>
+      <div class="tone-section">
+        <h3>📌 點擊加入聲調：</h3>
+        <div class="tone-pills" id="tone-pills"></div>
+        <div class="seq-bar" id="tone-seq">
+          <span class="seq-hint">點擊上方數字加入聲調…</span>
+        </div>
+        <div class="actions-row">
+          <button class="ghost" onclick="clearSeq()">✕ 清除</button>
+          <button class="go" onclick="searchByTones()" id="btn-tone-search">查詞語</button>
+        </div>
+      </div>
+      <div id="tone-results"></div>
+    </div>
+     
+    <!-- TAB 2 — 主題詞庫 -->
+    <div class="panel" id="panel-genre">
+      <p class="sec-desc">
+        選擇或輸入詩歌主題，獲取常用粵語詞句及聲調，方便配合旋律。
+      </p>
+      <div class="genre-chips" id="genre-chips"></div>
+      <div class="search-row">
+        <input id="genre-input" placeholder="輸入主題，例：讚美、敬拜、感恩、受苦…" onkeydown="if(event.key==='Enter')searchByGenre()">
+        <button class="go" onclick="searchByGenre()" id="btn-genre">搜尋</button>
+      </div>
+      <div id="genre-status" class="status"></div>
+      <div id="genre-results" class="results-grid"></div>
+    </div>
+     
+    <!-- TAB 3 — 0243 填詞符號搜尋 -->
+    <div class="panel" id="panel-tech">
+      <p class="sec-desc">
+        輸入 <strong>0、2、3、4</strong> 的序列，搜尋旋律音符對應的詞語。<br>
+        本工具採用填詞人黃志華的 <strong>「0243」符號系統</strong>，按粵語音高分為四級：<br>
+        <strong style="color:#d62828">3</strong> = 高音（聲調 1、2）　
+        <strong style="color:#888">0</strong> = 中低音（聲調 4）　
+        <strong style="color:#e07c24">2</strong> = 中音（聲調 3、5）　
+        <strong style="color:#2e6fa3">4</strong> = 低音（聲調 6）<br>
+        例：<em>耶穌</em> je4-sou1 → <b>0·3</b>　<em>信望愛</em> seon3-mong6-oi3 → <b>2·4·2</b>　<em>聖靈降臨</em> sing3-ling4-gong3-lam4 → <b>2·0·2·0</b>
+      </p>
+
+      <div class="tone-legend" id="tech-tone-legend"></div>
+
+      <div class="tone-section">
+        <h3>📌 點擊 0／2／3／4 加入序列：</h3>
+        <div class="tone-pills" id="tech-tone-pills"></div>
+        <div class="seq-bar" id="tech-seq">
+          <span class="seq-hint">點擊上方數字加入聲調…</span>
+        </div>
+        <div class="actions-row">
+          <button class="ghost" onclick="clearTechSeq()">✕ 清除</button>
+          <button class="go" onclick="searchTech()" id="btn-tech-search">查詞語</button>
+        </div>
+      </div>
+
+      <div id="tech-results"></div>
     </div>
   </div>
-  <div id="tone-results"></div>
+</div>
+
+<!-- 說明書彈出視窗結構 (Modal) -->
+<div id="info-modal" class="modal-overlay" onclick="closeInfoModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeInfoModal()">✕</button>
+    <div class="modal-header">📖 如何使用本工具</div>
+    <div class="modal-body">
+      <p>寫粵語歌最大的挑戰在於「啱音」（詞的聲調必須與旋律高低一致）。本工具內建豐富的基督教詞庫，幫助你快速配對填詞。</p>
+      
+      <h3>🎼 聲調查字 (Tone Search)</h3>
+      <p>當你已經寫好了一段旋律，需要找對應聲調的詞語填進去時使用：</p>
+      <ol>
+        <li>聽出旋律的高低音走向。</li>
+        <li>點擊畫面上方的數字按鈕加入聲調（<code>1=高音</code>，<code>4=低音</code> 等）。</li>
+        <li>例如：你想找一個先「低音」後「高音」的詞，就依序點擊 <code>4</code> 和 <code>1</code>。</li>
+        <li>點擊「查詞語」，系統會幫你找出如「耶穌」、「平安」等符合聲調的詞。</li>
+      </ol>
+
+      <h3>🏷️ 主題詞庫 (Topical Dictionary)</h3>
+      <p>當你缺乏靈感，需要尋找特定主題的用詞時使用：</p>
+      <ol>
+        <li>點擊畫面上方的快速標籤（如：讚美、救恩、受苦等）。</li>
+        <li>你也可以在搜尋框中輸入你想要的關鍵字。</li>
+        <li>系統會列出該主題常用的詩歌詞彙，並標示好粵拼與聲調，方便你直接套用進樂譜。</li>
+      </ol>
+      
+      <h3>✏️ 0243填詞符號搜尋</h3>
+      <p>採用填詞人黃志華的「0243」音高符號系統，按旋律音高查找詞語：</p>
+      <ol>
+        <li><code>3</code> = 高音（粵語聲調 1、2）</li>
+        <li><code>0</code> = 中低音（聲調 4）</li>
+        <li><code>2</code> = 中音（聲調 3、5）</li>
+        <li><code>4</code> = 低音（聲調 6）</li>
+        <li>例：旋律是「中低→高」，就點擊 <code>0</code> 再點 <code>3</code>，找出如「耶穌」等詞語。</li>
+      </ol>
+      <p style="margin-top: 16px; font-size: 12px; text-align: center; color: #aaa;">本工具詞庫透過 database.csv 讀取，確保安全無隱私外洩風險。</p>
+    </div>
+  </div>
 </div>
  
-<!-- TAB 2 — 主題詞庫 -->
-<div class="panel" id="panel-genre">
-  <p class="sec-desc">
-    選擇或輸入詩歌主題，獲取常用粵語詞句及聲調，方便配合旋律。
-  </p>
-  <div class="genre-chips" id="genre-chips"></div>
-  <div class="search-row">
-    <input id="genre-input" placeholder="輸入主題，例：讚美、敬拜、感恩、受苦…" onkeydown="if(event.key==='Enter')searchByGenre()">
-    <button class="go" onclick="searchByGenre()" id="btn-genre">搜尋</button>
-  </div>
-  <div id="genre-status" class="status"></div>
-  <div id="genre-results" class="results-grid"></div>
-</div>
-</div>
 <script>
-
-const PHRASES = [
-  // ── 2-char phrases: 神性與稱呼 (Deity & Titles) ───────────────────────
-  {w:"上帝",j:"soeng dai",t:[6,3],type:"faith",m:"上帝、神"},
-  {w:"上主",j:"soeng zyu",t:[6,2],type:"faith",m:"上主、耶和華"},
-  {w:"真神",j:"zan san",t:[1,4],type:"faith",m:"真實的神"},
-  {w:"活神",j:"wut san",t:[6,4],type:"faith",m:"永活的神"},
-  {w:"天父",j:"tin fu",t:[1,6],type:"faith",m:"天上的父"},
-  {w:"耶穌",j:"je sou",t:[4,1],type:"faith",m:"耶穌"},
-  {w:"基督",j:"gei duk",t:[1,1],type:"faith",m:"基督 (受膏者)"},
-  {w:"救主",j:"gau zyu",t:[3,2],type:"faith",m:"救主耶穌"},
-  {w:"恩主",j:"jan zyu",t:[1,2],type:"faith",m:"施恩的主"},
-  {w:"聖父",j:"sing fu",t:[3,6],type:"faith",m:"三位一體之父"},
-  {w:"聖子",j:"sing zi",t:[3,2],type:"faith",m:"三位一體之子"},
-  {w:"聖靈",j:"sing ling",t:[3,4],type:"faith",m:"聖靈"},
-  {w:"雅威",j:"ngaa wai",t:[5,1],type:"faith",m:"耶和華的音譯"},
-  {w:"萬主",j:"maan zyu",t:[6,2],type:"faith",m:"萬主之主"},
-  {w:"萬王",j:"maan wong",t:[6,4],type:"faith",m:"萬王之王"},
-  {w:"神羔",j:"san gou",t:[4,1],type:"faith",m:"神的羔羊"},
-  {w:"羔羊",j:"gou joeng",t:[1,4],type:"faith",m:"代罪羔羊"},
-  {w:"天使",j:"tin si",t:[1,3],type:"faith",m:"天使"},
-  
-  // ── 2-char phrases: 神的屬性與國度 (Attributes & Kingdom) ────────────
-  {w:"全能",j:"cyun nang",t:[4,4],type:"faith",m:"無所不能"},
-  {w:"全知",j:"cyun zi",t:[4,1],type:"faith",m:"無所不知"},
-  {w:"信實",j:"seon sat",t:[3,6],type:"faith",m:"誠實可信"},
-  {w:"公義",j:"gung ji",t:[1,6],type:"faith",m:"公平正義"},
-  {w:"聖潔",j:"sing git",t:[3,3],type:"faith",m:"聖潔無瑕"},
-  {w:"至聖",j:"zi sing",t:[3,3],type:"faith",m:"至高聖潔"},
-  {w:"尊貴",j:"zyun gwai",t:[1,3],type:"faith",m:"尊貴"},
-  {w:"偉大",j:"wai daai",t:[5,6],type:"faith",m:"偉大"},
-  {w:"奇妙",j:"kei miu",t:[4,6],type:"faith",m:"奇妙"},
-  {w:"至高",j:"zi gou",t:[3,1],type:"faith",m:"至高無上"},
-  {w:"慈愛",j:"ci oi",t:[4,3],type:"faith",m:"慈愛"},
-  {w:"慈悲",j:"ci pei",t:[4,1],type:"faith",m:"慈悲憐憫"},
-  {w:"憐憫",j:"lin man",t:[4,5],type:"faith",m:"憐憫"},
-  {w:"恩典",j:"jan din",t:[1,2],type:"faith",m:"神的恩典"},
-  {w:"恩惠",j:"jan wai",t:[1,6],type:"faith",m:"恩惠"},
-  {w:"天恩",j:"tin jan",t:[1,1],type:"faith",m:"天上的恩典"},
-  {w:"主恩",j:"zyu jan",t:[2,1],type:"faith",m:"主的恩典"},
-  {w:"神恩",j:"san jan",t:[4,1],type:"faith",m:"神的恩典"},
-  {w:"永恆",j:"wing hang",t:[5,4],type:"faith",m:"永恆不變"},
-  {w:"永遠",j:"wing jyun",t:[5,5],type:"faith",m:"永遠"},
-  {w:"真理",j:"zan lei",t:[1,5],type:"faith",m:"真理"},
-  {w:"真道",j:"zan dou",t:[1,6],type:"faith",m:"真理之道"},
-  {w:"聖言",j:"sing jin",t:[3,4],type:"faith",m:"聖經話語"},
-  {w:"主旨",j:"zyu zi",t:[2,2],type:"faith",m:"主的旨意"},
-  {w:"天國",j:"tin gwok",t:[1,3],type:"faith",m:"神的國度"},
-  {w:"天堂",j:"tin tong",t:[1,4],type:"faith",m:"天堂"},
-  {w:"神國",j:"san gwok",t:[4,3],type:"faith",m:"神的國度"},
-  {w:"聖殿",j:"sing din",t:[3,6],type:"faith",m:"聖殿"},
-  {w:"祭壇",j:"zai taan",t:[3,4],type:"faith",m:"祭壇"},
-  {w:"寶座",j:"bou zo",t:[2,6],type:"faith",m:"神的寶座"},
-  {w:"冠冕",j:"gun min",t:[3,5],type:"faith",m:"榮耀冠冕"},
-  {w:"殿宇",j:"din jyu",t:[6,5],type:"faith",m:"神的殿宇"},
-  {w:"神蹟",j:"san zik",t:[4,1],type:"faith",m:"神蹟奇事"},
-
-  // ── 2-char phrases: 救贖與恩典 (Salvation & Grace) ────────────────
-  {w:"救恩",j:"gau jan",t:[3,1],type:"faith",m:"拯救的恩典"},
-  {w:"拯救",j:"cing gau",t:[2,3],type:"faith",m:"拯救"},
-  {w:"救贖",j:"gau suk",t:[3,6],type:"faith",m:"救贖"},
-  {w:"贖罪",j:"suk zeoi",t:[6,6],type:"faith",m:"贖罪"},
-  {w:"洗罪",j:"sai zeoi",t:[2,6],type:"faith",m:"洗淨罪惡"},
-  {w:"赦罪",j:"se zeoi",t:[3,6],type:"faith",m:"赦免罪惡"},
-  {w:"赦免",j:"se min",t:[3,5],type:"faith",m:"赦免寬恕"},
-  {w:"寬恕",j:"fun syu",t:[1,3],type:"faith",m:"寬恕"},
-  {w:"寶血",j:"bou hyut",t:[2,3],type:"faith",m:"耶穌的寶血"},
-  {w:"十架",j:"sap gaa",t:[6,3],type:"faith",m:"十字架"},
-  {w:"受苦",j:"sau fu",t:[6,2],type:"faith",m:"為罪受苦"},
-  {w:"犧牲",j:"hei saang",t:[1,1],type:"faith",m:"犧牲"},
-  {w:"捨己",j:"se gei",t:[2,2],type:"faith",m:"捨棄自己"},
-  {w:"復活",j:"fuk wut",t:[6,6],type:"faith",m:"死裡復活"},
-  {w:"升天",j:"sing tin",t:[1,1],type:"faith",m:"升上高天"},
-  {w:"再來",j:"zoi loi",t:[3,4],type:"faith",m:"耶穌再來"},
-  {w:"得勝",j:"dak sing",t:[1,3],type:"faith",m:"戰勝死亡/罪惡"},
-  {w:"重生",j:"cung saang",t:[6,1],type:"faith",m:"靈裡重生"},
-  {w:"更新",j:"gang san",t:[3,1],type:"faith",m:"生命更新"},
-  {w:"得救",j:"dak gau",t:[1,3],type:"faith",m:"獲得拯救"},
-  {w:"稱義",j:"cing ji",t:[1,6],type:"faith",m:"因信稱義"},
-  {w:"成聖",j:"sing sing",t:[4,3],type:"faith",m:"分別為聖"},
-  {w:"永生",j:"wing saang",t:[5,1],type:"faith",m:"永遠的生命"},
-  {w:"福音",j:"fuk jam",t:[1,1],type:"faith",m:"大好信息"},
-  {w:"罪人",j:"zeoi jan",t:[6,4],type:"faith",m:"有罪的人"},
-  {w:"罪惡",j:"zeoi ok",t:[6,3],type:"faith",m:"罪惡"},
-  {w:"悔改",j:"fui goi",t:[3,2],type:"faith",m:"悔改回轉"},
-  {w:"認罪",j:"jing zeoi",t:[6,6],type:"faith",m:"承認罪過"},
-
-  // ── 2-char phrases: 回應與敬拜 (Response & Worship) ────────────────
-  {w:"敬拜",j:"ging baai",t:[3,3],type:"praise",m:"敬拜神"},
-  {w:"讚美",j:"zaan mei",t:[3,5],type:"praise",m:"讚美神"},
-  {w:"頌讚",j:"sung zaan",t:[6,3],type:"praise",m:"頌讚"},
-  {w:"讚頌",j:"zaan sung",t:[3,6],type:"praise",m:"讚美歌頌"},
-  {w:"歌頌",j:"go sung",t:[1,6],type:"praise",m:"唱歌頌揚"},
-  {w:"稱頌",j:"cing sung",t:[1,3],type:"praise",m:"稱讚頌揚"},
-  {w:"頌揚",j:"sung joeng",t:[6,4],type:"praise",m:"頌揚"},
-  {w:"讚歎",j:"zaan taan",t:[3,3],type:"praise",m:"讚歎神作為"},
-  {w:"榮耀",j:"wing jiu",t:[4,6],type:"praise",m:"歸榮耀予神"},
-  {w:"高唱",j:"gou coeng",t:[1,3],type:"praise",m:"高聲歌唱"},
-  {w:"歡呼",j:"fun fu",t:[1,1],type:"praise",m:"歡呼慶祝"},
-  {w:"歡喜",j:"fun hei",t:[1,2],type:"praise",m:"心中歡喜"},
-  {w:"歡慶",j:"fun hing",t:[1,3],type:"praise",m:"歡慶"},
-  {w:"聖詩",j:"sing si",t:[3,1],type:"praise",m:"聖詩"},
-  {w:"新歌",j:"san go",t:[1,1],type:"praise",m:"唱新歌"},
-  {w:"感謝",j:"gam ze",t:[2,6],type:"prayer",m:"感謝"},
-  {w:"感恩",j:"gam jan",t:[2,1],type:"prayer",m:"感恩"},
-  {w:"禱告",j:"dou gou",t:[2,3],type:"prayer",m:"向神禱告"},
-  {w:"祈求",j:"kei kau",t:[4,4],type:"prayer",m:"祈求"},
-  {w:"呼求",j:"fu kau",t:[1,4],type:"prayer",m:"迫切呼求"},
-  {w:"尋求",j:"cam kau",t:[4,4],type:"prayer",m:"尋求神的面"},
-  {w:"渴慕",j:"hot mou",t:[3,6],type:"prayer",m:"渴慕神"},
-  {w:"仰望",j:"joeng mong",t:[5,6],type:"prayer",m:"仰望神"},
-  {w:"相信",j:"soeng seon",t:[1,3],type:"faith",m:"相信"},
-  {w:"信心",j:"seon sam",t:[3,1],type:"faith",m:"信心"},
-  {w:"信仰",j:"seon joeng",t:[3,5],type:"faith",m:"信仰"},
-  {w:"信靠",j:"seon kaau",t:[3,3],type:"faith",m:"信靠依賴"},
-  {w:"依靠",j:"ji kaau",t:[1,3],type:"faith",m:"依靠"},
-  {w:"倚靠",j:"ji kaau",t:[2,3],type:"faith",m:"倚靠"},
-  {w:"投靠",j:"tau kaau",t:[4,3],type:"faith",m:"投靠神"},
-  {w:"順服",j:"seon fuk",t:[6,6],type:"faith",m:"順服神"},
-  {w:"降服",j:"hong fuk",t:[4,6],type:"faith",m:"完全降服"},
-  {w:"敬畏",j:"ging wai",t:[3,3],type:"faith",m:"敬畏神"},
-  {w:"跟隨",j:"gan ceoi",t:[1,4],type:"faith",m:"跟隨主"},
-  {w:"同行",j:"tung hang",t:[4,4],type:"faith",m:"與主同行"},
-  {w:"委身",j:"wai san",t:[2,1],type:"faith",m:"委身奉獻"},
-  {w:"奉獻",j:"fung hin",t:[6,3],type:"praise",m:"奉獻"},
-  {w:"獻上",j:"hin soeng",t:[3,6],type:"praise",m:"獻上"},
-  {w:"歸向",j:"gwai hoeng",t:[1,3],type:"faith",m:"回轉歸向神"},
-  {w:"忠心",j:"zung sam",t:[1,1],type:"faith",m:"忠誠"},
-  {w:"愛主",j:"oi zyu",t:[3,2],type:"faith",m:"愛主"},
-  {w:"愛神",j:"oi san",t:[3,4],type:"faith",m:"愛神"},
-  {w:"愛人",j:"oi jan",t:[3,4],type:"faith",m:"愛人"},
-
-  // ── 2-char phrases: 教會與生活 (Church, Community & Life) ───────────────
-  {w:"教會",j:"gaau wui",t:[3,6],type:"faith",m:"教會"},
-  {w:"聖徒",j:"sing tou",t:[3,4],type:"faith",m:"基督徒"},
-  {w:"弟兄",j:"dai hing",t:[6,1],type:"faith",m:"主內弟兄"},
-  {w:"姊妹",j:"zi mui",t:[2,6],type:"faith",m:"主內姊妹"},
-  {w:"團契",j:"tyun kai",t:[4,3],type:"faith",m:"團契交接"},
-  {w:"肢體",j:"zi tai",t:[1,2],type:"faith",m:"基督的肢體"},
-  {w:"同心",j:"tung sam",t:[4,1],type:"faith",m:"同心合意"},
-  {w:"合一",j:"hap jat",t:[6,1],type:"faith",m:"主內合一"},
-  {w:"牧養",j:"muk joeng",t:[6,5],type:"faith",m:"牧養群羊"},
-  {w:"傳道",j:"cyun dou",t:[4,6],type:"faith",m:"傳講真道"},
-  {w:"宣教",j:"syun gaau",t:[1,3],type:"faith",m:"宣教傳福音"},
-  {w:"見證",j:"gin zing",t:[3,3],type:"faith",m:"作美好見證"},
-  {w:"門徒",j:"mun tou",t:[4,4],type:"faith",m:"耶穌的門徒"},
-  {w:"平安",j:"ping on",t:[4,1],type:"life",m:"屬天的平安"},
-  {w:"喜樂",j:"hei lok",t:[2,6],type:"life",m:"屬天的喜樂"},
-  {w:"喜悅",j:"hei jyut",t:[2,6],type:"life",m:"討神喜悅"},
-  {w:"盼望",j:"paan mong",t:[3,6],type:"life",m:"永恆的盼望"},
-  {w:"安慰",j:"on wai",t:[1,3],type:"life",m:"神的安慰"},
-  {w:"安息",j:"on sik",t:[1,1],type:"life",m:"在主裡安息"},
-  {w:"安靜",j:"on zing",t:[1,6],type:"life",m:"安靜等候"},
-  {w:"醫治",j:"ji zi",t:[1,6],type:"life",m:"身心醫治"},
-  {w:"釋放",j:"sik fong",t:[1,3],type:"life",m:"得蒙釋放"},
-  {w:"自由",j:"zi jau",t:[6,4],type:"life",m:"真理的自由"},
-  {w:"力量",j:"lik loeng",t:[6,6],type:"life",m:"神賜的力量"},
-  {w:"剛強",j:"gong koeng",t:[1,4],type:"life",m:"剛強壯膽"},
-  {w:"軟弱",j:"jyun joek",t:[5,6],type:"life",m:"人的軟弱"},
-  {w:"苦難",j:"fu naan",t:[2,6],type:"life",m:"經歷苦難"},
-  {w:"試煉",j:"si lin",t:[3,6],type:"life",m:"百般的試煉"},
-  {w:"眼淚",j:"ngaan leoi",t:[5,6],type:"life",m:"流淚"},
-  {w:"謙卑",j:"him bei",t:[1,1],type:"life",m:"謙卑"},
-  {w:"謙遜",j:"him seon",t:[1,6],type:"life",m:"謙遜"},
-  {w:"溫柔",j:"wan jau",t:[1,4],type:"life",m:"溫柔"},
-  {w:"忍耐",j:"jan naai",t:[2,6],type:"life",m:"忍耐"},
-  {w:"堅忍",j:"gin jan",t:[1,2],type:"life",m:"堅定忍耐"},
-  {w:"帶領",j:"daai ling",t:[3,5],type:"faith",m:"神的帶領"},
-  {w:"引導",j:"jan dou",t:[5,6],type:"faith",m:"神的引導"},
-  {w:"保守",j:"bou sau",t:[2,2],type:"faith",m:"神的保守"},
-  {w:"保護",j:"bou wu",t:[2,6],type:"faith",m:"神的保護"},
-  {w:"庇護",j:"bei wu",t:[3,6],type:"faith",m:"庇護所"},
-  {w:"遮蓋",j:"ze goi",t:[1,3],type:"faith",m:"寶血遮蓋"},
-  {w:"看守",j:"hon sau",t:[1,2],type:"faith",m:"看顧保守"},
-  {w:"眷顧",j:"gyun gu",t:[3,3],type:"faith",m:"神的眷顧"},
-  {w:"同在",j:"tung zoi",t:[4,6],type:"faith",m:"神與人同在"},
-  {w:"賜福",j:"ci fuk",t:[3,1],type:"faith",m:"神賜福"},
-  {w:"祝福",j:"zuk fuk",t:[1,1],type:"faith",m:"祝福"},
-  {w:"恩膏",j:"jan gou",t:[1,1],type:"faith",m:"聖靈的恩膏"},
-  {w:"生命",j:"saang ming",t:[1,6],type:"life",m:"生命"},
-  {w:"生活",j:"saang wut",t:[1,6],type:"life",m:"生活"},
-  {w:"心靈",j:"sam ling",t:[1,4],type:"life",m:"心靈"},
-  {w:"靈魂",j:"ling wan",t:[4,4],type:"life",m:"靈魂"},
-  {w:"成長",j:"sing zoeng",t:[4,2],type:"life",m:"屬靈成長"},
-
-  // ── 2-char phrases: 一般詩意/讚美詞彙 (General Poetic) ────────────────
-  {w:"光明",j:"gwong ming",t:[1,4],type:"gen",m:"光明"},
-  {w:"光輝",j:"gwong fai",t:[1,1],type:"gen",m:"光輝"},
-  {w:"榮美",j:"wing mei",t:[4,5],type:"gen",m:"榮美"},
-  {w:"美麗",j:"mei lai",t:[5,6],type:"gen",m:"美麗"},
-  {w:"美好",j:"mei hou",t:[5,2],type:"gen",m:"美好"},
-  {w:"山河",j:"saan ho",t:[1,4],type:"gen",m:"山河大地"},
-  {w:"大地",j:"daai dei",t:[6,6],type:"gen",m:"大地"},
-  {w:"江河",j:"gong ho",t:[1,4],type:"gen",m:"江河"},
-  {w:"晨星",j:"san sing",t:[4,1],type:"gen",m:"明亮的晨星"},
-  {w:"萬民",j:"maan man",t:[6,4],type:"gen",m:"萬民"},
-  {w:"萬國",j:"maan gwok",t:[6,3],type:"gen",m:"萬國"},
-  {w:"列邦",j:"lit bong",t:[6,1],type:"gen",m:"列國列邦"},
-
-  // ── 3-char phrases ──────────────────────────────────────────────────────
-  {w:"耶和華",j:"je wo waa",t:[4,4,4],type:"faith",m:"耶和華"},
-  {w:"彌賽亞",j:"nei coi aa",t:[4,3,3],type:"faith",m:"彌賽亞"},
-  {w:"保惠師",j:"bou wai si",t:[2,6,1],type:"faith",m:"聖靈保惠師"},
-  {w:"創造主",j:"cong zou zyu",t:[3,6,2],type:"faith",m:"創造天地的主"},
-  {w:"造物主",j:"zou mat zyu",t:[6,6,2],type:"faith",m:"造物主"},
-  {w:"萬王王",j:"maan wong wong",t:[6,4,4],type:"faith",m:"萬王之王"},
-  {w:"萬主主",j:"maan zyu zyu",t:[6,2,2],type:"faith",m:"萬主之主"},
-  {w:"全能神",j:"cyun nang san",t:[4,4,4],type:"faith",m:"全能的神"},
-  {w:"神羔羊",j:"san gou joeng",t:[4,1,4],type:"faith",m:"神的羔羊"},
-  {w:"活水泉",j:"wut seoi cyun",t:[6,2,4],type:"faith",m:"活水的泉源"},
-  {w:"生命樹",j:"saang ming syu",t:[1,6,6],type:"faith",m:"生命樹"},
-  {w:"避難所",j:"bei naan so",t:[6,6,2],type:"faith",m:"堅固的避難所"},
-  {w:"十字架",j:"sap zi gaa",t:[6,6,3],type:"faith",m:"耶穌的十字架"},
-  {w:"寶血泉",j:"bou hyut cyun",t:[2,3,4],type:"faith",m:"洗罪寶血泉"},
-  {w:"奇異恩",j:"kei ji jan",t:[4,6,1],type:"faith",m:"奇異恩典"},
-  {w:"天父愛",j:"tin fu oi",t:[1,6,3],type:"faith",m:"天父的愛"},
-  {w:"主恩典",j:"zyu jan din",t:[2,1,2],type:"faith",m:"主的恩典"},
-  {w:"主恩愛",j:"zyu jan oi",t:[2,1,3],type:"faith",m:"主的恩愛"},
-  {w:"神恩典",j:"san jan din",t:[4,1,2],type:"faith",m:"神的恩典"},
-  {w:"聖靈火",j:"sing ling fo",t:[3,4,2],type:"faith",m:"聖靈如火"},
-  {w:"聖靈愛",j:"sing ling oi",t:[3,4,3],type:"faith",m:"聖靈的愛"},
-  {w:"聖靈光",j:"sing ling gwong",t:[3,4,1],type:"faith",m:"聖靈的光"},
-  {w:"聖靈力",j:"sing ling lik",t:[3,4,6],type:"faith",m:"聖靈的能力"},
-  {w:"救恩主",j:"gau jan zyu",t:[3,1,2],type:"faith",m:"救恩的主"},
-  {w:"得勝主",j:"dak sing zyu",t:[1,3,2],type:"faith",m:"得勝的主"},
-  {w:"平安主",j:"ping on zyu",t:[4,1,2],type:"faith",m:"賜平安的主"},
-  {w:"主耶穌",j:"zyu je sou",t:[2,4,1],type:"faith",m:"主耶穌"},
-  {w:"永生命",j:"wing saang ming",t:[5,1,6],type:"faith",m:"永恆生命"},
-  {w:"福音光",j:"fuk jam gwong",t:[1,1,1],type:"faith",m:"福音的光"},
-  {w:"寶血恩",j:"bou hyut jan",t:[2,3,1],type:"faith",m:"寶血之恩"},
-  {w:"真理道",j:"zan lei dou",t:[1,5,6],type:"faith",m:"真理之道"},
-  {w:"赦免恩",j:"se min jan",t:[3,5,1],type:"faith",m:"赦免之恩"},
-  {w:"新恩典",j:"san jan din",t:[1,1,2],type:"faith",m:"新的恩典"},
-  {w:"洗眾罪",j:"sai zung zeoi",t:[2,3,6],type:"faith",m:"洗淨眾罪"},
-  {w:"蒙赦免",j:"mung se min",t:[4,3,5],type:"faith",m:"得蒙赦免"},
-  {w:"生命光",j:"saang ming gwong",t:[1,6,1],type:"faith",m:"生命之光"},
-  {w:"生命泉",j:"saang ming cyun",t:[1,6,4],type:"faith",m:"生命之泉"},
-  {w:"生命道",j:"saang ming dou",t:[1,6,6],type:"faith",m:"生命之道"},
-  {w:"永不離",j:"wing bat lei",t:[5,1,4],type:"faith",m:"永不離棄"},
-  {w:"永不棄",j:"wing bat hei",t:[5,1,3],type:"faith",m:"永不拋棄"},
-  {w:"永同在",j:"wing tung zoi",t:[5,4,6],type:"faith",m:"永遠同在"},
-  {w:"主憐憫",j:"zyu lin man",t:[2,4,5],type:"prayer",m:"主的憐憫"},
-  {w:"主慈愛",j:"zyu ci oi",t:[2,4,3],type:"faith",m:"主的慈愛"},
-  {w:"主同行",j:"zyu tung hang",t:[2,4,4],type:"faith",m:"主與我同行"},
-  {w:"主同在",j:"zyu tung zoi",t:[2,4,6],type:"faith",m:"主與我同在"},
-  {w:"主帶領",j:"zyu daai ling",t:[2,3,5],type:"faith",m:"主帶領我"},
-  {w:"主引導",j:"zyu jan dou",t:[2,5,6],type:"faith",m:"主引導我"},
-  {w:"主保護",j:"zyu bou wu",t:[2,2,6],type:"faith",m:"主保護我"},
-  {w:"神同在",j:"san tung zoi",t:[4,4,6],type:"faith",m:"神與我同在"},
-  {w:"神帶領",j:"san daai ling",t:[4,3,5],type:"faith",m:"神帶領"},
-  {w:"神保護",j:"san bou wu",t:[4,2,6],type:"faith",m:"神保護"},
-  {w:"神慈愛",j:"san ci oi",t:[4,4,3],type:"faith",m:"神的慈愛"},
-  {w:"光中行",j:"gwong zung hang",t:[1,1,4],type:"faith",m:"在光中行走"},
-  {w:"愛中行",j:"oi zung hang",t:[3,1,4],type:"faith",m:"在愛中行走"},
-  {w:"恩中活",j:"jan zung wut",t:[1,1,6],type:"faith",m:"在恩典中活"},
-  {w:"榮耀主",j:"wing jiu zyu",t:[4,6,2],type:"praise",m:"榮耀主"},
-  {w:"讚美主",j:"zaan mei zyu",t:[3,5,2],type:"praise",m:"讚美主"},
-  {w:"敬拜主",j:"ging baai zyu",t:[3,3,2],type:"praise",m:"敬拜主"},
-  {w:"讚美神",j:"zaan mei san",t:[3,5,4],type:"praise",m:"讚美神"},
-  {w:"頌讚主",j:"sung zaan zyu",t:[6,3,2],type:"praise",m:"頌讚主"},
-  {w:"感謝主",j:"gam ze zyu",t:[2,6,2],type:"prayer",m:"感謝主"},
-  {w:"感謝神",j:"gam ze san",t:[2,6,4],type:"prayer",m:"感謝神"},
-  {w:"榮耀歸",j:"wing jiu gwai",t:[4,6,1],type:"praise",m:"榮耀歸於"},
-  {w:"仰望主",j:"joeng mong zyu",t:[5,6,2],type:"prayer",m:"仰望主"},
-  {w:"跟隨主",j:"gan ceoi zyu",t:[1,4,2],type:"faith",m:"跟隨主"},
-  {w:"愛慕主",j:"oi mou zyu",t:[3,6,2],type:"faith",m:"愛慕主"},
-  {w:"倚靠主",j:"ji kaau zyu",t:[2,3,2],type:"faith",m:"倚靠主"},
-  {w:"投靠主",j:"tau kaau zyu",t:[4,3,2],type:"faith",m:"投靠主"},
-  {w:"信靠主",j:"seon kaau zyu",t:[3,3,2],type:"faith",m:"信靠主"},
-  {w:"讚頌恩",j:"zaan sung jan",t:[3,6,1],type:"praise",m:"讚頌恩典"},
-  {w:"獻上讚",j:"hin soeng zaan",t:[3,6,3],type:"praise",m:"獻上讚美"},
-  {w:"求主聽",j:"kau zyu ting",t:[4,2,1],type:"prayer",m:"求主垂聽"},
-  {w:"高聲唱",j:"gou sing coeng",t:[1,1,3],type:"praise",m:"高聲唱"},
-  {w:"歡呼聲",j:"fun fu sing",t:[1,1,1],type:"praise",m:"歡呼聲"},
-  {w:"心歡喜",j:"sam fun hei",t:[1,1,2],type:"praise",m:"心中歡喜"},
-  {w:"心感恩",j:"sam gam jan",t:[1,2,1],type:"prayer",m:"心中感恩"},
-  {w:"心讚美",j:"sam zaan mei",t:[1,3,5],type:"praise",m:"心中讚美"},
-  {w:"心靈歌",j:"sam ling go",t:[1,4,1],type:"praise",m:"心靈的歌"},
-  {w:"傳福音",j:"cyun fuk jam",t:[4,1,1],type:"faith",m:"傳揚福音"},
-  {w:"萬民頌",j:"maan man sung",t:[6,4,6],type:"praise",m:"萬民頌讚"},
-  {w:"萬國歌",j:"maan gwok go",t:[6,3,1],type:"praise",m:"萬國歌頌"},
-  {w:"哈利路",j:"haa lei lou",t:[1,6,6],type:"praise",m:"哈利路亞(前三字)"},
-  {w:"亞哈利",j:"aa haa lei",t:[3,1,6],type:"praise",m:"亞哈利路"},
-  {w:"阿們願",j:"aa man jyun",t:[3,4,6],type:"prayer",m:"阿們，願"},
-  {w:"讚美歌",j:"zaan mei go",t:[3,5,1],type:"praise",m:"讚美詩歌"},
-  {w:"敬拜歌",j:"ging baai go",t:[3,3,1],type:"praise",m:"敬拜詩歌"},
-  {w:"禱告詞",j:"dou gou ci",t:[2,3,4],type:"prayer",m:"禱告的話"},
-
-  // ── 4-char phrases ──────────────────────────────────────────────────────
-  {w:"耶穌基督",j:"je sou gei duk",t:[4,1,1,1],type:"faith",m:"Jesus Christ"},
-  {w:"萬王之王",j:"maan wong zi wong",t:[6,4,1,4],type:"faith",m:"萬王之王"},
-  {w:"萬主之主",j:"maan zyu zi zyu",t:[6,2,1,2],type:"faith",m:"萬主之主"},
-  {w:"全能真神",j:"cyun nang zan san",t:[4,4,1,4],type:"faith",m:"全能真神"},
-  {w:"三一真神",j:"saam jat zan san",t:[1,1,1,4],type:"faith",m:"三位一體真神"},
-  {w:"永活真神",j:"wing wut zan san",t:[5,6,1,4],type:"faith",m:"永活真神"},
-  {w:"慈愛天父",j:"ci oi tin fu",t:[4,3,1,6],type:"faith",m:"慈愛天父"},
-  {w:"榮耀寶座",j:"wing jiu bou zo",t:[4,6,2,6],type:"faith",m:"榮耀的寶座"},
-  {w:"聖潔公義",j:"sing git gung ji",t:[3,3,1,6],type:"faith",m:"聖潔與公義"},
-  {w:"奇異恩典",j:"kei ji jan din",t:[4,6,1,2],type:"faith",m:"Amazing Grace"},
-  {w:"奇妙救恩",j:"kei miu gau jan",t:[4,6,3,1],type:"faith",m:"奇妙的救恩"},
-  {w:"十架寶血",j:"sap gaa bou hyut",t:[6,3,2,3],type:"faith",m:"十字架的寶血"},
-  {w:"替罪羔羊",j:"tai zeoi gou joeng",t:[3,6,1,4],type:"faith",m:"代罪羔羊"},
-  {w:"捨己救贖",j:"se gei gau suk",t:[2,2,3,6],type:"faith",m:"捨棄自己救贖"},
-  {w:"出死入生",j:"ceot sei jap saang",t:[1,2,6,1],type:"faith",m:"脫離死亡進入永生"},
-  {w:"主恩永在",j:"zyu jan wing zoi",t:[2,1,5,6],type:"faith",m:"主恩永遠同在"},
-  {w:"永不改變",j:"wing bat goi bin",t:[5,1,2,3],type:"faith",m:"永不改變"},
-  {w:"永不離棄",j:"wing bat lei hei",t:[5,1,4,3],type:"faith",m:"永不離棄"},
-  {w:"主愛無限",j:"zyu oi mou haan",t:[2,3,4,6],type:"faith",m:"主愛無限"},
-  {w:"神愛世人",j:"san oi sai jan",t:[4,3,3,4],type:"faith",m:"神愛世人"},
-  {w:"神愛永恆",j:"san oi wing hang",t:[4,3,5,4],type:"faith",m:"神愛永恆"},
-  {w:"慈愛永恆",j:"ci oi wing hang",t:[4,3,5,4],type:"faith",m:"慈愛永恆"},
-  {w:"恩典夠用",j:"jan din gau jung",t:[1,2,3,6],type:"faith",m:"恩典夠用"},
-  {w:"主恩永遠",j:"zyu jan wing jyun",t:[2,1,5,5],type:"faith",m:"主恩永遠"},
-  {w:"福音真道",j:"fuk jam zan dou",t:[1,1,1,6],type:"faith",m:"福音真理"},
-  {w:"救恩恩典",j:"gau jan jan din",t:[3,1,1,2],type:"faith",m:"救恩與恩典"},
-  {w:"聖靈充滿",j:"sing ling cung mun",t:[3,4,1,2],type:"faith",m:"聖靈充滿"},
-  {w:"聖靈感動",j:"sing ling gam dung",t:[3,4,2,6],type:"faith",m:"聖靈感動"},
-  {w:"平安喜樂",j:"ping on hei lok",t:[4,1,2,6],type:"faith",m:"平安喜樂"},
-  {w:"喜樂平安",j:"hei lok ping on",t:[2,6,4,1],type:"faith",m:"喜樂平安"},
-  {w:"靈魂得救",j:"ling wan dak gau",t:[4,4,1,3],type:"faith",m:"靈魂得救"},
-  {w:"得蒙赦免",j:"dak mung se min",t:[1,4,3,5],type:"faith",m:"得蒙赦免"},
-  {w:"稱義成聖",j:"cing ji sing sing",t:[1,6,4,3],type:"faith",m:"稱義成聖"},
-  {w:"榮耀歸主",j:"wing jiu gwai zyu",t:[4,6,1,2],type:"praise",m:"榮耀歸於主"},
-  {w:"榮耀歸神",j:"wing jiu gwai san",t:[4,6,1,4],type:"praise",m:"榮耀歸於神"},
-  {w:"榮耀頌讚",j:"wing jiu sung zaan",t:[4,6,6,3],type:"praise",m:"榮耀頌讚"},
-  {w:"讚美頌揚",j:"zaan mei sung joeng",t:[3,5,6,4],type:"praise",m:"讚美頌揚"},
-  {w:"感謝讚美",j:"gam ze zaan mei",t:[2,6,3,5],type:"praise",m:"感謝讚美"},
-  {w:"讚美稱頌",j:"zaan mei cing sung",t:[3,5,1,3],type:"praise",m:"讚美稱頌"},
-  {w:"獻上頌讚",j:"hin soeng sung zaan",t:[3,6,6,3],type:"praise",m:"獻上頌讚"},
-  {w:"全心敬拜",j:"cyun sam ging baai",t:[4,1,3,3],type:"praise",m:"全心敬拜"},
-  {w:"俯伏敬拜",j:"fu fuk ging baai",t:[2,6,3,3],type:"praise",m:"俯伏敬拜"},
-  {w:"舉手敬拜",j:"geoi sau ging baai",t:[2,2,3,3],type:"praise",m:"舉手敬拜"},
-  {w:"屈膝敬拜",j:"wat sat ging baai",t:[1,1,3,3],type:"praise",m:"屈膝敬拜"},
-  {w:"永遠感謝",j:"wing jyun gam ze",t:[5,5,2,6],type:"prayer",m:"永遠感謝"},
-  {w:"永遠讚美",j:"wing jyun zaan mei",t:[5,5,3,5],type:"praise",m:"永遠讚美"},
-  {w:"永遠頌揚",j:"wing jyun sung joeng",t:[5,5,6,4],type:"praise",m:"永遠頌揚"},
-  {w:"心靈歌頌",j:"sam ling go sung",t:[1,4,1,6],type:"praise",m:"心靈歌頌"},
-  {w:"齊聲讚美",j:"cai sing zaan mei",t:[4,1,3,5],type:"praise",m:"齊聲讚美"},
-  {w:"同心頌讚",j:"tung sam sung zaan",t:[4,1,6,3],type:"praise",m:"同心頌讚"},
-  {w:"歡呼讚美",j:"fun fu zaan mei",t:[1,1,3,5],type:"praise",m:"歡呼讚美"},
-  {w:"高聲歌頌",j:"gou sing go sung",t:[1,1,1,6],type:"praise",m:"高聲歌頌"},
-  {w:"傳揚福音",j:"cyun joeng fuk jam",t:[4,4,1,1],type:"faith",m:"傳揚福音"},
-  {w:"廣傳福音",j:"gwong cyun fuk jam",t:[2,4,1,1],type:"faith",m:"廣傳福音"},
-  {w:"萬民頌揚",j:"maan man sung joeng",t:[6,4,6,4],type:"praise",m:"萬民頌揚"},
-  {w:"萬國讚美",j:"maan gwok zaan mei",t:[6,3,3,5],type:"praise",m:"萬國讚美"},
-  {w:"哈利路亞",j:"haa lei lou aa",t:[1,6,6,3],type:"praise",m:"Hallelujah"},
-  {w:"阿們阿們",j:"aa man aa man",t:[3,4,3,4],type:"prayer",m:"阿們阿們"},
-  {w:"信心盼望",j:"seon sam paan mong",t:[3,1,3,6],type:"faith",m:"信心盼望"},
-  {w:"信心跟隨",j:"seon sam gan ceoi",t:[3,1,1,4],type:"faith",m:"信心跟隨"},
-  {w:"仰望倚靠",j:"joeng mong ji kaau",t:[5,6,2,3],type:"prayer",m:"仰望倚靠"},
-  {w:"投靠倚賴",j:"tau kaau ji laai",t:[4,3,2,6],type:"faith",m:"投靠倚賴"},
-  {w:"全心愛主",j:"cyun sam oi zyu",t:[4,1,3,2],type:"faith",m:"全心愛主"},
-  {w:"全心歸主",j:"cyun sam gwai zyu",t:[4,1,1,2],type:"faith",m:"全心歸主"},
-  {w:"全心跟隨",j:"cyun sam gan ceoi",t:[4,1,1,4],type:"faith",m:"全心跟隨"},
-  {w:"奉獻生命",j:"fung hin saang ming",t:[6,3,1,6],type:"faith",m:"奉獻生命"},
-  {w:"捨己跟主",j:"se gei gan zyu",t:[2,2,1,2],type:"faith",m:"捨己跟主"},
-  {w:"背十字架",j:"bui sap zi gaa",t:[3,6,6,3],type:"faith",m:"背十字架"},
-  {w:"同心合意",j:"tung sam hap ji",t:[4,1,6,3],type:"faith",m:"同心合意"},
-  {w:"彼此相愛",j:"bei ci soeng oi",t:[2,2,1,3],type:"faith",m:"彼此相愛"},
-  {w:"奔跑天路",j:"ban paau tin lou",t:[1,2,1,6],type:"faith",m:"奔跑天路"},
-  {w:"屬靈軍裝",j:"suk ling gwan zong",t:[6,4,1,1],type:"faith",m:"穿戴屬靈軍裝"},
-  {w:"靠主得勝",j:"kaau zyu dak sing",t:[3,2,1,3],type:"faith",m:"靠主得勝"}
-];
- 
+// ══════════════════════════════════════════════════════════════════════════
+//  系統核心：變數與對應表設定
+// ══════════════════════════════════════════════════════════════════════════
+let PHRASES = [];
 const TONE_INDEX = {}; 
-PHRASES.forEach(p => {
-  const key = p.t.join("-");
-  if (!TONE_INDEX[key]) TONE_INDEX[key] = [];
-  TONE_INDEX[key].push(p);
-});
- 
-const TC = { 1:"#d62828",2:"#e07c24",3:"#1a9e8a",4:"#2e6fa3",5:"#7b2fbe",6:"#4a5260" };
-const TN = { 1:"陰平",2:"陰上",3:"陰去",4:"陽平",5:"陽上",6:"陽去" };
-const TT = { 1:"高平↔",2:"高升↗",3:"高降↘",4:"低平→",5:"低升↗",6:"低降↘" };
-const TYPE_LABEL = { faith:"基督教",praise:"讚美",prayer:"禱告",life:"生命",gen:"一般" };
-const TYPE_COLOR = { faith:"#b5251a",praise:"#c9933a",prayer:"#2e6fa3",life:"#1a9e8a",gen:"#888" };
- 
+const TONE_INDEX_0243 = {};
+
+// 0243 轉換對應表
+const TO_0243 = { 1:3, 2:3, 3:2, 4:0, 5:2, 6:4, 0:0 };
+
+// 色彩與名稱對應
+const TC = { 1:"#d62828", 2:"#e07c24", 3:"#1a9e8a", 4:"#2e6fa3", 5:"#7b2fbe", 6:"#4a5260", 0:"#888" };
+const TN = { 1:"陰平", 2:"陰上", 3:"陰去", 4:"陽平", 5:"陽上", 6:"陽去", 0:"輕/入聲" };
+const TT = { 1:"高平↔", 2:"高升↗", 3:"高降↘", 4:"低平→", 5:"低升↗", 6:"低降↘", 0:"短促" };
+const TYPE_LABEL = { faith:"基督教", praise:"讚美", prayer:"禱告", life:"生命", gen:"一般" };
+const TYPE_COLOR = { faith:"#b5251a", praise:"#c9933a", prayer:"#2e6fa3", life:"#1a9e8a", gen:"#888" };
+
+const TC0 = { 3:"#d62828", 0:"#888888", 2:"#e07c24", 4:"#2e6fa3" };
+const TN0 = { 3:"3 高音",  0:"0 中低音", 2:"2 中音", 4:"4 低音" };
+const TT0 = { 3:"聲調1、2", 0:"聲調4",   2:"聲調3、5", 4:"聲調6" };
+
 let seq = [];
- 
+let techSeq = [];
+
+// ══════════════════════════════════════════════════════════════════════════
+//  資料庫載入與解析 (支援沙盒預覽與正式環境)
+// ══════════════════════════════════════════════════════════════════════════
+async function loadDatabase() {
+  let text = "";
+  try {
+    // 檢查目前是否為 HTTP 或 HTTPS 環境 (Live Server / Netlify)
+    // 如果是在 Canvas 沙盒 (blob:)，則主動跳至 catch，避免 fetch 發生 URL 解析錯誤
+    if (!window.location.protocol.startsWith('http')) {
+      throw new Error("非 HTTP 伺服器環境 (例如：預覽沙盒)。");
+    }
+    
+    const response = await fetch('database.csv');
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status} - 找不到檔案`);
+    }
+    
+    text = await response.text();
+    
+  } catch (error) {
+    console.warn("無法載入外部 CSV 檔案，已切換至示範模式:", error.message);
+    
+    // 為預覽環境提供極少量的示範資料，維持程式碼輕量化
+    text = `w,j,t,type,m
+上帝,soeng dai,6-3,faith,上帝 神
+耶穌,je sou,4-1,faith,耶穌
+聖靈,sing ling,3-4,faith,聖靈
+平安,ping on,4-1,life,屬天的平安
+哈利路亞,haa lei lou aa,1-6-6-3,praise,Hallelujah`;
+
+    // 顯示友善提示給開發者
+    const indicator = document.getElementById('loading-indicator');
+    indicator.style.color = "#e07c24"; // 改為黃/橘色提示
+    indicator.innerHTML = 
+      '⚠️ <strong>提示：您目前處於預覽沙盒環境</strong><br>' +
+      '<small style="color:#666; font-weight:normal; display:block; margin-top:8px;">' +
+      '預覽環境的安全機制無法讀取外部的 <code>database.csv</code>，已為您載入「示範資料」。<br>' +
+      '👉 <b>請放心：</b>只要將檔案下載至電腦，並使用 VS Code 的 <b>Live Server</b> 開啟，就會自動讀取您完整的詞庫！</small>';
+      
+    // 延遲 3.5 秒讓使用者看清楚提示
+    await new Promise(resolve => setTimeout(resolve, 3500));
+  }
+
+  // 解析文字 (不管是真正的 CSV 還是示範字串)
+  const lines = text.split(/\r?\n/);
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const parts = line.split(',');
+    if (parts.length >= 5) {
+      const w = parts[0];
+      const j = parts[1];
+      const tStr = parts[2];
+      const type = parts[3];
+      const m = parts.slice(4).join(','); 
+      
+      const t = tStr.split('-').map(Number);
+      const t0243 = t.map(tone => TO_0243[tone] ?? tone);
+      
+      PHRASES.push({ w, j, t, type, m, t0243 });
+    }
+  }
+
+  // 建立索引，優化搜尋速度
+  PHRASES.forEach(p => {
+    const key = p.t.join("-");
+    if (!TONE_INDEX[key]) TONE_INDEX[key] = [];
+    TONE_INDEX[key].push(p);
+
+    const key0243 = p.t0243.join("-");
+    if (!TONE_INDEX_0243[key0243]) TONE_INDEX_0243[key0243] = [];
+    TONE_INDEX_0243[key0243].push(p);
+  });
+
+  // 載入完成，切換 UI 顯示狀態
+  document.getElementById('loading-indicator').style.display = 'none';
+  document.getElementById('main-ui').style.display = 'block';
+  
+  // 初始化所有介面元件
+  renderToneLegend();
+  renderTonePills();
+  renderGenreChips();
+  initTechTab();
+}
+
+// 網頁準備就緒後，開始載入資料庫
+window.onload = loadDatabase;
+
+// ══════════════════════════════════════════════════════════════════════════
+//  UI 共用邏輯與 Modal 彈出視窗
+// ══════════════════════════════════════════════════════════════════════════
+function openInfoModal() {
+  const modal = document.getElementById('info-modal');
+  modal.style.display = 'flex'; 
+  setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeInfoModal(event) {
+  const modal = document.getElementById('info-modal');
+  if (event && event.target !== modal && !event.target.classList.contains('modal-close')) return;
+  modal.classList.remove('show');
+  setTimeout(() => modal.style.display = 'none', 200);
+}
+
 function switchTab(id){
-  const ids=["tone","genre"]; // Removed 'jyut'
+  const ids=["tone", "genre", "tech"];
   document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",ids[i]===id));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
   document.getElementById("panel-"+id).classList.add("active");
 }
- 
 
+function phraseCard(p) {
+  const borderColor = TYPE_COLOR[p.type]||"#ccc";
+  const chips = p.j.split(" ").map((jp,i)=>{
+    const t=p.t[i]||0;
+    const col=TC[t]||"#888";
+    return `<span class="jp-chip" style="background:${col}">${jp}<span class="tc">${t}</span></span>`;
+  }).join("");
+  const toneFlow = p.t.map(t=>`<span style="color:${TC[t]};font-weight:700">${t}</span>`).join(`<span style="color:#ccc;font-size:10px">→</span>`);
+  return `
+    <div class="phrase-card" style="border-left-color:${borderColor}">
+      <div class="phrase-top">
+        <div class="phrase-hz">${p.w}</div>
+        <span class="phrase-type" style="background:${borderColor}22;color:${borderColor}">${TYPE_LABEL[p.type]||p.type}</span>
+      </div>
+      <div class="phrase-jp-row">${chips}</div>
+      <div style="font-size:11px;color:#bbb;margin-bottom:4px;font-family:'JetBrains Mono',monospace">
+        聲調：${toneFlow}
+      </div>
+      ${p.m?`<div class="phrase-meaning">${p.m}</div>`:""}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  TAB 1：傳統聲調搜尋
+// ══════════════════════════════════════════════════════════════════════════
 function renderToneLegend(){
   document.getElementById("tone-legend").innerHTML =
     [1,2,3,4,5,6].map(t=>`
@@ -462,7 +330,6 @@ function renderTonePills(){
       </button>`).join("");
 }
  
-
 function addTone(t){
   if(seq.length>=6) return;
   seq.push(t);
@@ -486,21 +353,17 @@ function renderSeq(){
     +`<span style="color:#aaa;font-size:12px;margin-left:6px">序列：${seq.join(" → ")}</span>`;
 }
  
-// ══════════════════════════════════════════════════════════════════════════
-//  SEARCH BY TONES
-// ══════════════════════════════════════════════════════════════════════════
 function searchByTones(){
   if(!seq.length) return;
   const key = seq.join("-");
   const el = document.getElementById("tone-results");
  
   const exact = TONE_INDEX[key] || [];
-  const seqStr = seq.join("-");
   const partial = [];
   Object.entries(TONE_INDEX).forEach(([k,phrases])=>{
     if(k===key) return; 
-    if(seqStr.includes(k) || k.includes(seqStr)){
-      phrases.forEach(p=>partial.push({...p,_matchNote:"部分符合"}));
+    if(k.includes(key) || key.includes(k)){ 
+      phrases.forEach(p=> { if (!partial.includes(p)) partial.push(p); });
     }
   });
  
@@ -514,52 +377,25 @@ function searchByTones(){
   }
  
   let html="";
- 
+  const sortFn = arr => [...arr].sort((a,b)=>{
+    const order={faith:0,praise:1,prayer:2,life:3,gen:4};
+    return (order[a.type]??5)-(order[b.type]??5);
+  });
+
   if(exact.length){
-    const sorted = [...exact].sort((a,b)=>{
-      const order={faith:0,praise:1,prayer:2,life:3,gen:4};
-      return (order[a.type]??5)-(order[b.type]??5);
-    });
-    html+=`<div class="sec-hdr">完全吻合 <span class="cnt">${sorted.length}</span></div>`;
-    html+=`<div class="results-grid">`+sorted.map(p=>phraseCard(p,seq)).join("")+`</div>`;
+    html+=`<div class="sec-hdr">完全吻合 <span class="cnt">${exact.length}</span></div>`;
+    html+=`<div class="results-grid">`+sortFn(exact).map(p=>phraseCard(p)).join("")+`</div>`;
   }
- 
   if(partial.length){
-    const pSorted = partial.sort((a,b)=>{
-      const order={faith:0,praise:1,prayer:2,life:3,gen:4};
-      return (order[a.type]??5)-(order[b.type]??5);
-    });
-    html+=`<div class="sec-hdr" style="margin-top:24px">部分符合 <span class="cnt">${pSorted.length}</span></div>`;
-    html+=`<div class="results-grid">`+pSorted.map(p=>phraseCard(p,seq)).join("")+`</div>`;
+    html+=`<div class="sec-hdr" style="margin-top:24px">部分符合 <span class="cnt">${partial.length}</span></div>`;
+    html+=`<div class="results-grid">`+sortFn(partial).map(p=>phraseCard(p)).join("")+`</div>`;
   }
- 
   el.innerHTML = html;
 }
 
-function phraseCard(p, highlightTones){
-  const toneKey = p.t.join("-");
-  const borderColor = TYPE_COLOR[p.type]||"#ccc";
-  const chips = p.j.split(" ").map((jp,i)=>{
-    const t=p.t[i]||0;
-    const col=TC[t]||"#888";
-    return `<span class="jp-chip" style="background:${col}">${jp}<span class="tc">${t}</span></span>`;
-  }).join("");
-  const toneFlow = p.t.map(t=>`<span style="color:${TC[t]};font-weight:700">${t}</span>`).join(`<span style="color:#ccc;font-size:10px">→</span>`);
-  return `
-    <div class="phrase-card" style="border-left-color:${borderColor}">
-      <div class="phrase-top">
-        <div class="phrase-hz">${p.w}</div>
-        <span class="phrase-type" style="background:${borderColor}22;color:${borderColor}">${TYPE_LABEL[p.type]||p.type}</span>
-      </div>
-      <div class="phrase-jp-row">${chips}</div>
-      <div style="font-size:11px;color:#bbb;margin-bottom:4px;font-family:'JetBrains Mono',monospace">
-        聲調：${toneFlow}
-      </div>
-      ${p.m?`<div class="phrase-meaning">${p.m}</div>`:""}
-    </div>`;
-}
- 
-//  TAB 2 — 主題詞庫 
+// ══════════════════════════════════════════════════════════════════════════
+//  TAB 2：主題詞庫搜尋
+// ══════════════════════════════════════════════════════════════════════════
 const GENRES=["讚美","敬拜","感恩","禱告","救恩","復活","聖靈","信心","盼望","受苦","宣教","謙卑","順服"];
  
 function renderGenreChips(){
@@ -571,6 +407,7 @@ function selectGenre(g){
   document.querySelectorAll(".g-chip").forEach(c=>c.classList.toggle("sel",c.textContent===g));
   searchByGenre();
 }
+ 
 const GENRE_TYPE_MAP = {
   讚美:["praise","faith"], 敬拜:["praise","faith"], 感恩:["prayer","praise"],
   禱告:["prayer","faith"], 救恩:["faith"], 復活:["faith"], 聖靈:["faith"],
@@ -607,16 +444,128 @@ function searchByGenre(){
  
   if(localHits.length){
     status.textContent=`本地詞庫找到 ${localHits.length} 個「${val}」詞句：`;
-    results.innerHTML=localHits.map(p=>phraseCard(p,[])).join("");
+    results.innerHTML=localHits.map(p=>phraseCard(p)).join("");
   } else {
     status.textContent="未找到結果，請換個主題再試。";
   }
 }
- 
 
-renderToneLegend();
-renderTonePills();
-renderGenreChips();
+// ══════════════════════════════════════════════════════════════════════════
+//  TAB 3：0243 填詞符號搜尋
+// ══════════════════════════════════════════════════════════════════════════
+function initTechTab() {
+  document.getElementById("tech-tone-legend").innerHTML =
+    [3,0,2,4].map(t=>`
+      <div class="tl-item">
+        <div class="tl-dot" style="background:${TC0[t]}">${t}</div>
+        <span>${TN0[t]}（${TT0[t]}）</span>
+      </div>`).join("");
+
+  document.getElementById("tech-tone-pills").innerHTML =
+    [3,0,2,4].map(t=>`
+      <button class="tone-pill" data-t="${t}" style="background:${TC0[t]}" onclick="addTechTone(${t})">
+        ${t}<span class="tip">${TN0[t]}（${TT0[t]}）</span>
+      </button>`).join("");
+}
+
+function addTechTone(t) {
+  if (techSeq.length >= 6) return;
+  techSeq.push(t);
+  renderTechSeq();
+}
+function removeTechTone(i) { techSeq.splice(i,1); renderTechSeq(); }
+function clearTechSeq() {
+  techSeq = [];
+  renderTechSeq();
+  document.getElementById("tech-results").innerHTML = "";
+}
+function renderTechSeq() {
+  const el = document.getElementById("tech-seq");
+  if (!techSeq.length) { el.innerHTML='<span class="seq-hint">點擊上方數字加入音高符號…</span>'; return; }
+  el.innerHTML = techSeq.map((t,i)=>`
+    <div class="seq-item">
+      <div class="seq-dot" style="background:${TC0[t]}">${t}</div>
+      <div class="seq-lbl">${TN0[t]}</div>
+      <button class="seq-del" onclick="removeTechTone(${i})">✕</button>
+    </div>`).join("")
+    + `<span style="color:#aaa;font-size:12px;margin-left:6px">序列：${techSeq.join(" · ")}</span>`;
+}
+
+function searchTech() {
+  if (!techSeq.length) return;
+  const key    = techSeq.join("-");
+  const el     = document.getElementById("tech-results");
+
+  const exact = TONE_INDEX_0243[key] || [];
+  const partial = [];
+  Object.entries(TONE_INDEX_0243).forEach(([k, phrases]) => {
+    if (k === key) return;
+    if (k.startsWith(key + "-")) { 
+      phrases.forEach(p => { if (!partial.includes(p)) partial.push(p); });
+    }
+  });
+
+  if (!exact.length && !partial.length) {
+    el.innerHTML = `
+      <div style="padding:20px;background:#fff;border-radius:14px;color:#888;font-size:14px;text-align:center">
+        未找到符號序列「${techSeq.join("·")}」的詞語。<br>
+        <small>請試試其他 0/2/3/4 組合，或減少序列長度。</small>
+      </div>`;
+    return;
+  }
+
+  const sortFn = arr => [...arr].sort((a,b) => {
+    const o = {faith:0,praise:1,prayer:2,life:3,gen:4};
+    return (o[a.type]??5) - (o[b.type]??5);
+  });
+
+  let html = "";
+  if (exact.length) {
+    html += `<div class="sec-hdr">符合「${techSeq.join("·")}」<span class="cnt">${exact.length}</span></div>
+      <div class="results-grid">${sortFn(exact).map(p => phraseCard0243(p)).join("")}</div>`;
+  }
+  if (partial.length) {
+    html += `<div class="sec-hdr" style="margin-top:24px">以「${techSeq.join("·")}」開首的更長詞語 <span class="cnt">${partial.length}</span></div>
+      <div class="results-grid">${sortFn(partial).map(p => phraseCard0243(p)).join("")}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function phraseCard0243(p) {
+  const borderColor = TYPE_COLOR[p.type] || "#ccc";
+  const chips = p.j.split(" ").map((jp, i) => {
+    const t   = p.t[i]  || 0;
+    const col = TC[t]   || "#888";
+    return `<span class="jp-chip" style="background:${col}">${jp}<span class="tc">${t}</span></span>`;
+  }).join("");
+
+  const badges0243 = p.t0243.map(s =>
+    `<span style="display:inline-flex;align-items:center;justify-content:center;
+      width:26px;height:26px;border-radius:50%;background:${TC0[s]||'#ccc'};
+      color:#fff;font-size:14px;font-weight:900;">${s}</span>`
+  ).join(`<span style="color:#ccc;font-size:12px;padding:0 2px">·</span>`);
+
+  const origFlow = p.t.map(t =>
+    `<span style="color:${TC[t]};font-weight:700">${t}</span>`
+  ).join(`<span style="color:#ddd;font-size:10px">→</span>`);
+
+  return `
+    <div class="phrase-card" style="border-left-color:${borderColor}">
+      <div class="phrase-top">
+        <div class="phrase-hz">${p.w}</div>
+        <span class="phrase-type" style="background:${borderColor}22;color:${borderColor}">${TYPE_LABEL[p.type]||p.type}</span>
+      </div>
+      <div class="phrase-jp-row">${chips}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <span style="font-size:10px;color:#bbb;font-family:'JetBrains Mono',monospace">原調：${origFlow}</span>
+        <span style="font-size:10px;color:#bbb">→</span>
+        <span style="font-size:11px;font-weight:700;color:#444">0243：</span>
+        ${badges0243}
+      </div>
+      ${p.m ? `<div class="phrase-meaning">${p.m}</div>` : ""}
+    </div>`;
+}
+
 </script>
 </body>
 </html>
